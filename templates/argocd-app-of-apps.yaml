@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argocd-apps
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    helm.sh/hook: post-install
+    helm.sh/resource-policy: keep
+spec:
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  project: argo-master
+  source:
+    repoURL: http://helm.public.k8s.local
+    chart: argocd-apps
+    targetRevision: "*"
+    helm:
+      releaseName: cluster
+      version: v3
+  syncPolicy: {}
+    # automated:
+    #   prune: false
+    #   selfHeal: true

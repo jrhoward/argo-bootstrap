@@ -1,0 +1,82 @@
+# Default values for argocd.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# TODO
+# - High priority for statefulsets
+# - Zonal anti-affinity
+# - reposServer : persistent volumes to prevent out of space errors
+# - controller: shard across multiple contollers if too many clusters.
+# - map to AWS service accounts where needed
+# - add argo-master project
+
+ingress:
+  enabled: true
+
+appProjectName: argo-master
+appSource:
+    chart: argocd-app-of-apps
+    repoURL: https://jrhoward.github.io/kube-bootstrap/helm-charts
+    targetRevision: '*'
+    helm:
+      releaseName: 'argo-master-config'
+      version: v3
+appNamespace: argocd
+appName: argo-master-config
+appDestServer: https://kubernetes.default.svc
+appDestNamespace: argocd
+
+argo-cd:
+  enabled: true
+  installCRDs: false
+  server:
+    replicas: 1
+    extraArgs:
+      - --insecure
+    config:
+      # Argo CD's externally facing base URL (optional). Required when configuring SSO
+      url: https://argocd.public.k8s.local
+      repositories: |
+        - type: helm
+          name: argo-platform
+          url: https://argoproj.github.io/argo-helm
+        - type: helm
+          name: prometheus-community
+          url: https://prometheus-community.github.io/helm-charts
+      users.anonymous.enabled: "true"
+      users.session.duration: "24h"
+      accounts.operator: login, apiKey
+      policy.default: role:readonly
+      policy.csv: |
+        p, user:operator, applications, get, */*, allow
+        p, user:operator, applications, sync, */*, allow
+        p, user:operator, projects, get, * , allow
+  # controller:
+  # repoServer:
+  #   env:
+  #     - name: TMPDIR
+  #       value: "/svr/cache"
+  #   volumeMounts:
+  #     - mountPath: "/svr/cache"
+  #       name: argo-reposerver-cache
+  #   volumes:
+  #     - name: argo-reposerver-cache
+  #       persistentVolumeClaim:
+  #         claimName: argo-reposerver-cache
+
+  redis:
+    image:
+      tag: '6.2.4'
+  # configs:
+  dex:
+    enabled: false
+
+# helm repo add argo https://argoproj.github.io/argo-helm
+# helm install argo/argocd-notifications --generate-name \
+#     --set triggers[0].name=on-sync-succeeded \
+#     --set triggers[0].enabled=true \
+#     --set secret.notifiers.slack.enabled=true \
+#     --set secret.notifiers.slack.token=<my-token>
+
+# trigger catalogue https://argocd-notifications.readthedocs.io/en/stable/catalog/
+# teams notification https://argocd-notifications.readthedocs.io/en/stable/services/teams/
